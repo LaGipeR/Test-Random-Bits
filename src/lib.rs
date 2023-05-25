@@ -7,7 +7,7 @@ impl RandomBits {
     pub fn new() -> RandomBits {
         let mut bits = Vec::with_capacity(Self::BITS_COUNT);
         let mut seed = 871246u64;
-        for _ in 0..((Self::BITS_COUNT + 31) >> 5) {
+        for _ in 0..(Self::BITS_COUNT >> 5) {
             bits.push(Self::get_next_random_block(&mut seed));
         }
 

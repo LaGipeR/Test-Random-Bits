@@ -117,36 +117,54 @@ impl RandomBits {
         [2733, 1421, 748, 402, 223, 223];
     pub fn sequence_len_test(&self) -> bool {
         let mut one_sequence_len = 0usize;
-        let mut sequence_len_count = vec![0usize; Self::LOWER_SEQUENCE_LEN_COUNT.len()];
+        let mut zero_sequence_len = 0usize;
+        let mut one_sequence_len_count = vec![0usize; Self::SEQUENCE_LEN_COUNT_SIZE];
+        let mut zero_sequence_len_count = vec![0usize; Self::SEQUENCE_LEN_COUNT_SIZE];
 
         for i in 0..Self::BITS_COUNT {
             let bit = self.get_bit(i);
             if bit {
                 one_sequence_len += 1;
+
+                if zero_sequence_len != 0 {
+                    if zero_sequence_len >= Self::SEQUENCE_LEN_COUNT_SIZE {
+                        zero_sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
+                    } else {
+                        zero_sequence_len_count[zero_sequence_len - 1] += 1;
+                    }
+                    zero_sequence_len = 0;
+                }
             } else {
                 if one_sequence_len != 0 {
-                    if one_sequence_len >= sequence_len_count.len() {
-                        sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
+                    if one_sequence_len >= Self::SEQUENCE_LEN_COUNT_SIZE {
+                        one_sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
                     } else {
-                        sequence_len_count[one_sequence_len - 1] += 1;
+                        one_sequence_len_count[one_sequence_len - 1] += 1;
                     }
                     one_sequence_len = 0;
                 }
+
+                zero_sequence_len += 1
             }
         }
 
         if one_sequence_len != 0 {
-            if one_sequence_len >= sequence_len_count.len() {
-                sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
+            if one_sequence_len >= one_sequence_len_count.len() {
+                one_sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
             } else {
-                sequence_len_count[one_sequence_len - 1] += 1;
+                one_sequence_len_count[one_sequence_len - 1] += 1;
             }
-            one_sequence_len = 0;
         }
 
-        for i in 0..sequence_len_count.len() {
-            if !(Self::LOWER_SEQUENCE_LEN_COUNT[i] <= sequence_len_count[i]
-                && sequence_len_count[i] <= Self::UPPER_SEQUENCE_LEN_COUNT[i])
+        for i in 0..one_sequence_len_count.len() {
+            if !(Self::LOWER_SEQUENCE_LEN_COUNT[i] <= one_sequence_len_count[i]
+                && one_sequence_len_count[i] <= Self::UPPER_SEQUENCE_LEN_COUNT[i])
+            {
+                return false;
+            }
+
+            if !(Self::LOWER_SEQUENCE_LEN_COUNT[i] <= zero_sequence_len_count[i]
+                && zero_sequence_len_count[i] <= Self::UPPER_SEQUENCE_LEN_COUNT[i])
             {
                 return false;
             }

@@ -4,10 +4,10 @@ pub struct RandomBits {
 
 impl RandomBits {
     const BITS_COUNT: usize = 20_000;
-    fn new() -> RandomBits {
+    pub fn new() -> RandomBits {
         let mut bits = Vec::with_capacity(Self::BITS_COUNT);
         let mut seed = 871246u64;
-        for _ in 0..(Self::BITS_COUNT >> 5) {
+        for _ in 0..((Self::BITS_COUNT + 31) >> 5) {
             bits.push(Self::get_next_random_block(&mut seed));
         }
 
@@ -32,6 +32,11 @@ impl RandomBits {
         block
     }
 
+    #[inline]
+    fn get_bit(&self, idx: usize) -> bool {
+        ((self.bits[idx >> 5] >> (idx & 0b11111)) & 1) == 1
+    }
+
     const LOWER_BOUND_MONO_BIT_TEST: u32 = 9654;
     const UPPER_BOUND_MONO_BIT_TEST: u32 = 10346;
     pub fn mono_bit_test(&self) -> bool {
@@ -52,18 +57,19 @@ impl RandomBits {
         let mut zero_sequence_len = 0usize;
         let mut max_sequence_len = 0usize;
 
-        for bits_block in self.bits.iter() {
-            for i in 0..32 {
-                if bits_block & (1 << i) != 0 {
-                    one_sequence_len += 1;
-                    zero_sequence_len = 0;
-                } else {
-                    zero_sequence_len += 1;
-                    one_sequence_len = 0;
-                }
-                max_sequence_len = max(max_sequence_len, max(one_sequence_len, zero_sequence_len));
+        for i in 0..Self::BITS_COUNT {
+            let bit = self.get_bit(i);
+            if bit {
+                one_sequence_len += 1;
+                max_sequence_len = max(max_sequence_len, zero_sequence_len);
+                zero_sequence_len = 0;
+            } else {
+                zero_sequence_len += 1;
+                max_sequence_len = max(max_sequence_len, one_sequence_len);
+                one_sequence_len = 0;
             }
         }
+        max_sequence_len = max(max_sequence_len, max(one_sequence_len, zero_sequence_len));
 
         max_sequence_len <= Self::MAX_POSSIBLE_SEQUENCE_LEN
     }
@@ -79,16 +85,16 @@ impl RandomBits {
 
         let mut cur_pokker_block = 0usize;
         let mut cur_pokker_block_len = 0usize;
-        for bits_block in self.bits.iter() {
-            for i in 0..32 {
-                cur_pokker_block = (cur_pokker_block << 1) | ((*bits_block as usize >> i) & 1);
-                cur_pokker_block_len += 1;
+        for i in 0..Self::BITS_COUNT {
+            let bit = self.get_bit(i);
 
-                if cur_pokker_block_len == Self::M {
-                    sequence_count[cur_pokker_block] += 1;
-                    cur_pokker_block = 0;
-                    cur_pokker_block_len = 0;
-                }
+            cur_pokker_block = (cur_pokker_block << 1) | bit as usize;
+            cur_pokker_block_len += 1;
+
+            if cur_pokker_block_len == Self::M {
+                sequence_count[cur_pokker_block] += 1;
+                cur_pokker_block = 0;
+                cur_pokker_block_len = 0;
             }
         }
 
@@ -113,19 +119,18 @@ impl RandomBits {
         let mut one_sequence_len = 0usize;
         let mut sequence_len_count = vec![0usize; Self::LOWER_SEQUENCE_LEN_COUNT.len()];
 
-        for bits_block in self.bits.iter() {
-            for i in 0..32 {
-                if bits_block & (1 << i) != 0 {
-                    one_sequence_len += 1;
-                } else {
-                    if one_sequence_len != 0 {
-                        if one_sequence_len >= sequence_len_count.len() {
-                            sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
-                        } else {
-                            sequence_len_count[one_sequence_len - 1] += 1;
-                        }
-                        one_sequence_len = 0;
+        for i in 0..Self::BITS_COUNT {
+            let bit = self.get_bit(i);
+            if bit {
+                one_sequence_len += 1;
+            } else {
+                if one_sequence_len != 0 {
+                    if one_sequence_len >= sequence_len_count.len() {
+                        sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
+                    } else {
+                        sequence_len_count[one_sequence_len - 1] += 1;
                     }
+                    one_sequence_len = 0;
                 }
             }
         }
@@ -147,7 +152,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn tests() {
         let rnd_bits = RandomBits::new();
 
         assert!(rnd_bits.mono_bit_test());

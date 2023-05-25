@@ -135,6 +135,15 @@ impl RandomBits {
             }
         }
 
+        if one_sequence_len != 0 {
+            if one_sequence_len >= sequence_len_count.len() {
+                sequence_len_count[Self::SEQUENCE_LEN_COUNT_SIZE - 1] += 1;
+            } else {
+                sequence_len_count[one_sequence_len - 1] += 1;
+            }
+            one_sequence_len = 0;
+        }
+
         for i in 0..sequence_len_count.len() {
             if !(Self::LOWER_SEQUENCE_LEN_COUNT[i] <= sequence_len_count[i]
                 && sequence_len_count[i] <= Self::UPPER_SEQUENCE_LEN_COUNT[i])
